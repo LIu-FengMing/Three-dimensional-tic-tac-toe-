@@ -1,0 +1,13 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  /* color: rgb(78, 21, 21); */
+  /* background: rgb(255, 228, 228); */
+}
+
+canvas {
+  /* display: block; */
+  padding: 0;
+  background: #ddd;
+  margin: 0 auto;
+}
