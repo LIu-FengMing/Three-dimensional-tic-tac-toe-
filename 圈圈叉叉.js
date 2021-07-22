@@ -1,15 +1,19 @@
 let sliderGroup = [];
 let controlBtn = [];
 let gameStageSpan;
-let X,Y,Z;
-let centerX,centerY,centerZ;
-let GroundSize = 3;
-let GroundUnit = 50;
+let gameSizeStageSpan;
+let X, Y, Z;
+let centerX, centerY, centerZ;
+let GroundSize = 10;
+let GameSize = 3;
+let GroundUnit = 20;
 let GroundEdge = GroundUnit * GroundSize;
 let h = 20;
 let FrontPatten = "front", BackPatten = "back", LeftPatten = "left", RightPatten = "right", UpPatten = "up", DownPatten = "down";
-let EnterPatten = "Enter", RestGamePatten = "RestGame", GameIntroductionPatten = "GameIntroduction",PreviousPatten = "Previous";
+let EnterPatten = "Enter", RestGamePatten = "RestGame", GameIntroductionPatten = "GameIntroduction", PreviousPatten = "Previous";
 let threeSizeGamePatten = "sizeOfThree", fourSizeGamePatten = "sizeOfFour";
+let hasGravity = true;
+
 var controlName = [{
     key: "前(w,↑)",
     value: FrontPatten
@@ -67,7 +71,7 @@ function setup() {
         }
         sliderGroup.push(sliderElement);
         h = map(i, 0, 7, 5, 600);
-        sliderGroup[i].position(10+ h, height +10);
+        sliderGroup[i].position(10 + h, height + 10);
         sliderGroup[i].style('width', '80px');
         sliderGroup[i].changed(changeCamera);
     }
@@ -90,6 +94,9 @@ function setup() {
 
         controlBtn.push(element);
     }
+
+    gameSizeStageSpan = createSpan('現在是 3 個連在一起就贏喔');
+    gameSizeStageSpan.position(width + 10, 405);
 
 }
 
@@ -137,7 +144,7 @@ function initGround() {
 
     // fill(255, 102, 94);
 
-    ambientLight(255,255,255);
+    ambientLight(255, 255, 255);
     ambientMaterial(255, 102, 94);
 
     translate(0, 0, -5);
@@ -158,6 +165,8 @@ function initGround() {
     pop();
 }
 
+
+//TODO 明顯一點
 function createTargetElement(dx, dy, dz) {
     push();
     translate(-0.5 * GroundEdge, -0.5 * GroundEdge, 0);
@@ -177,43 +186,29 @@ function createTargetElement(dx, dy, dz) {
 
 function createCircle(dx, dy, dz) {
     push();
-    normalMaterial();
-
-    //ambientLight(255,255,255);
-    ambientMaterial(220);
+    stroke(0, 0, 0);
+    ambientMaterial(255);
     translate(-0.5 * GroundEdge, -0.5 * GroundEdge, 0);
 
     var rx = (dx + 0.5) * GroundUnit;
     var ry = (dy + 0.5) * GroundUnit;
     var rz = (dz + 0.5) * GroundUnit;
-    // translate(20, 0, 0);
     translate(rx, ry, rz);
-    //直角
-    rotateX(PI / 2);
-    torus(GroundUnit / (2) - 5, 5);
-
+    box(GroundUnit);
     pop();
 }
 
 function createFork(dx, dy, dz) {
     push();
-    normalMaterial();
-
-   // ambientLight(255,255,255);
-    ambientMaterial(80);
+    stroke(255, 255, 255);
+    ambientMaterial(0);
     translate(-0.5 * GroundEdge, -0.5 * GroundEdge, 0);
 
     var rx = (dx + 0.5) * GroundUnit;
     var ry = (dy + 0.5) * GroundUnit;
     var rz = (dz + 0.5) * GroundUnit;
-    // translate(20, 0, 0);
     translate(rx, ry, rz);
-    //直角
-    rotateY(PI / 4);
-    box(5, 5, GroundUnit);
-
-    rotateY(PI * 2 / 4);
-    box(5, 5, GroundUnit);
+    box(GroundUnit);
     pop();
 }
 
@@ -284,7 +279,7 @@ function controlGameButton(e) {
                 return;
             }
         }
-        GroundSize = 3;
+        GameSize = 3;
         restGame();
     }
     else if (e.target.value == fourSizeGamePatten) {
@@ -294,7 +289,7 @@ function controlGameButton(e) {
                 return;
             }
         }
-        GroundSize = 4;
+        GameSize = 4;
         restGame();
     }
     else {
@@ -302,6 +297,7 @@ function controlGameButton(e) {
     }
 }
 
+//TODO 自動跳到最上層的元素
 function controlTargetElement(value) {
     var vector = [0, 0, 0];
     switch (value) {
@@ -325,13 +321,48 @@ function controlTargetElement(value) {
             break;
     }
 
-    for (let index = 0; index < targetPostion.length; index++) {
-        var temp = targetPostion[index] + vector[index];
-        if (temp >= 0 && temp < GroundSize) {
-            targetPostion[index] += vector[index];
+    let canMoveTarget = true;
+    if (hasGravity) {
+        let tryMoveTargetDownPostion = [0, 0, 0];
+        canMoveTarget = false;
+        for (let index = 0; index < targetPostion.length; index++) {
+            var temp = targetPostion[index] + vector[index];
+            if ((temp >= 0 && temp < GroundSize)) {
+                tryMoveTargetDownPostion[index] = temp;
+            }
+            else {
+                tryMoveTargetDownPostion[index] = targetPostion[index];
+            }
+        }
+        // z 軸
+        if (tryMoveTargetDownPostion[2] > 0) {
+            for (let index = 0; index < gameElement.length; index++) {
+                const element = gameElement[index];
+                if (tryMoveTargetDownPostion[0] == element.pos[0]
+                    && tryMoveTargetDownPostion[1] == element.pos[1]
+                    && tryMoveTargetDownPostion[2] - 1 == element.pos[2]) {
+                    canMoveTarget = true;
+                    break;
+                }
+            }
+        }
+        else {
+            canMoveTarget = true;
+        }
+
+    }
+
+    if (canMoveTarget) {
+        for (let index = 0; index < targetPostion.length; index++) {
+            var temp = targetPostion[index] + vector[index];
+            if (temp >= 0 && temp < GroundSize) {
+                targetPostion[index] += vector[index];
+            }
         }
     }
-    // console.log(targetPostion);
+    else {
+        gameStageSpan.html("你的控制向不能懸空");
+    }
 
 }
 
@@ -380,8 +411,8 @@ function putPlayerElement() {
     }
 }
 
-function previousPutPlayerElement(){
-    if(gameElement.length>0){
+function previousPutPlayerElement() {
+    if (gameElement.length > 0) {
         gameElement.pop();
         winGmaeFlag = false;
         drawType += 1;
@@ -408,26 +439,79 @@ function checkIsWinGame() {
         const element = gameElement[index];
         var x, y, z;
         [x, y, z] = [element.pos[0], element.pos[1], element.pos[2]];
-
+        element.canOutSee = true;
         checkThreeDimensionalList[z][y][x] = (element.type + 1); // 0 -> 1,1->2
     }
+
+    //被包住的點不算 8個面都有東西
+    //將被包住的點的 canOutSee 改為 false 並把 checkThreeDimensionalList[z][y][x] 設為 0
+    // 3*3*3 27-1 = 26 
+    var outSeeCheckVectorList = [
+        // 基本的 6 塊  
+        // 前 後 左
+        // 右 上 下
+        [0, -1, 0], [0, 1, 0], [-1, 0, 0],
+        [1, 0, 0], [0, 0, 1], [0, 0, -1],
+    ];
+    var x, y, z;
+    [x, y, z] = [0, 0, 0];
+    for (let indexCheck = 0; indexCheck < outSeeCheckVectorList.length; indexCheck++) {
+        const unitVector = outSeeCheckVectorList[indexCheck];
+        x = x + unitVector[0];
+        y = y + unitVector[1];
+        z = z + unitVector[2];
+    }
+    //透過每一點去做檢查有沒有被包住
+    for (let index = 0; index < gameElement.length; index++) {
+        const element = gameElement[index];
+        var x, y, z;
+        [x, y, z] = [element.pos[0], element.pos[1], element.pos[2]];
+
+        var canOutSee = false;
+        for (let indexCheck = 0; indexCheck < outSeeCheckVectorList.length && !canOutSee; indexCheck++) {
+            const unitVector = outSeeCheckVectorList[indexCheck];
+            var tempx, tempy, tempz;
+            tempx = x + unitVector[0];
+            tempy = y + unitVector[1];
+            tempz = z + unitVector[2];
+            var checkPoint = [tempx, tempy, tempz];
+            
+            if(tempz > -1){
+                if(tempx > -1 && tempy > -1){
+                    //假設他不存在 或 =0
+                    if(!checkThreeDimensionalList[tempz][tempy][tempx] || checkThreeDimensionalList[tempz][tempy][tempx] == 0){
+                        canOutSee =true;
+                    }
+                }
+            }
+        }
+
+        if(!canOutSee){
+            element.canOutSee = false;
+            checkThreeDimensionalList[z][y][x] = 0;
+        }
+    }
+
     //透過每一點去做檢查
     for (let index = 0; index < gameElement.length; index++) {
         const element = gameElement[index];
+        if (!element.canOutSee) {
+            continue;
+        }
         var x, y, z, eleType;
         [x, y, z] = [element.pos[0], element.pos[1], element.pos[2]];
         eleType = element.type + 1;
         var winUnitVectorList = [
             [1, 0, 0], [0, 1, 0], [1, 1, 0], [1, -1, 0], //一維平面
             [0, 0, 1], [1, 1, 1], [1, -1, -1], [1, -1, 1], [-1, -1, 1], // 垂直和四個最斜的斜線　　　1 0 2,1 1 1,  
-            [1, 0, 1],[0, 1, 1],[0, 1, -1], [-1, 0, 1], [1, 1, 0], [1, -1, 0]// 左右兩邊的斜線
+            [1, 0, 1], [0, 1, 1], [0, 1, -1], [-1, 0, 1], [1, 1, 0], [1, -1, 0]// 左右兩邊的斜線
         ];
 
         for (let indexCheck = 0; indexCheck < winUnitVectorList.length; indexCheck++) {
             const unitVector = winUnitVectorList[indexCheck];
             var isWin = true;
             var tempx, tempy, tempz;
-            for (let continueCount = 1; continueCount < GroundSize; continueCount++) {
+            for (let continueCount = 1; continueCount < GameSize; continueCount++) {
                 tempx = x + unitVector[0] * continueCount;
                 tempy = y + unitVector[1] * continueCount;
                 tempz = z + unitVector[2] * continueCount;
@@ -463,10 +547,19 @@ function restGame() {
     gameElement = [];
     drawType = 0;
     winGmaeFlag = false;
-    targetPostion=[0,0,0];
+    targetPostion = [0, 0, 0];
     GroundEdge = GroundUnit * GroundSize;
+
+    if (GameSize == 3) {
+        gameSizeStageSpan.html("現在是 3 個連在一起就贏喔");
+    }
+    else {
+        gameSizeStageSpan.html("現在是 4 個連在一起就贏喔");
+    }
+
 }
 
+// TODO　修改遊戲說明
 function gameIntroduction() {
     var textContext = "　　這是一款立體的3D圈圈叉叉，可以透過下方按鈕來決定要玩3*3*3或4*4*4。\n" +
         "　　遊玩方式是透過旁邊的前後左右上下按鈕或鍵盤上的wsadrf(方別與前面對照)和只有前後左右的方向健決定要放的位置。\n" +
